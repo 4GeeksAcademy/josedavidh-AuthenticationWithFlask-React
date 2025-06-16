@@ -5,11 +5,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 db = SQLAlchemy()
 
 class User(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False)
+    __tablename__ = "user"
 
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    fullname: Mapped[str] = mapped_column(String(80), nullable=False)
+    # avatar: Mapped[str] = mapped_column(String(120), nullable=False, default="https://randomuser.me/api/portraits/men/2.jpg")
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
+    salt: Mapped[str] = mapped_column(String(80), nullable=False, default=1)
 
     def serialize(self):
         return {
