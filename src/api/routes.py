@@ -3,17 +3,17 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
 from api.models import db, User
-from api.utils import generate_sitemap, APIException
+from api.utils import generate_sitemap, APIException, send_email
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from base64 import b64encode
 import os
-from flask_jwt_extended import create_access_token, jwt_required
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from datetime import timedelta
 
 api = Blueprint('api', __name__)
 
 # manejo de hash de contraseña
-
 def set_password(password, salt):
     return generate_password_hash(f"{password}{salt}")
 
@@ -21,6 +21,8 @@ def check_password(pass_hash, password, salt):
     return check_password_hash(pass_hash, f"{password}{salt}")
 
 # final manejo de hash de contraseña
+expires_in_minutes = 15
+expires_delta = timedelta(minutes=expires_in_minutes)
 
 # Allow CORS requests to this API
 CORS(api)
@@ -89,3 +91,66 @@ def get_all_users():
     users = User.query.all()
 
     return jsonify(list(map(lambda item: item.serialize(), users))), 200
+
+@api.route("/me", methods=["GET"])
+@jwt_required() # Procesamiento de consultas con token únicamente
+def get_a_user():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if user is None:
+        return jsonify("User not found"), 404
+    return jsonify(user.serialize())
+
+@api.route("/reset-password", methods=["POST"])
+def reset_password():
+    # Requerimiento del correo electrónico para enviar el enlace de recuperación
+    body = request.json
+    user = User.query.filter_by(email = body).one_or_one()
+    if user is None:
+        return jsonify("User not found"), 404
+    access_token = create_access_token(
+        identity=body, expires_delta=expires_delta)
+
+    message = f"""
+        <a href="{os.getenv("FRONTEND_URL")}/password-update?token={access_token}">Recuperar contraseña</a>
+    """
+
+    data = {
+        "subject": "Recuperación de contraseña",
+        "to": body,
+        "message": message
+    }
+
+    email_sent = send_email(
+        data.get("subject"), data.get("to"), data.get("message")
+    )
+
+    if email_sent:
+        return jsonify("Message sent"), 200
+    else:
+        return jsonify("Error"), 200
+    
+@api.route("/update-password", methods=["PUT"])
+@jwt_required()
+def update_password():
+    user_token_email = get_jwt_identity()
+    password = request.json
+
+    user = User.query.filter_by(email=user_token_email).first()
+
+    if user is not None:
+        salt = b64encode(os.urandom(32)).decode("utf-8")
+        password = set_password(password, salt)
+
+        user.salt = salt
+        user.password = password
+
+        try:
+            db.session.commit()
+            return jsonify("password changed successfully"), 201
+        except Exception as error:
+            db.session.rollback()
+            return jsonify("Error"), 500
+        
+        print(user.serialize)
