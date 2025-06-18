@@ -21,7 +21,7 @@ export const Register = () => {
     const handleSubmit = async (event) => {
         event.preventDefault()
         const url = import.meta.env.VITE_BACKEND_URL;
-        const response = await fetch(`${url}/register`, {
+        const response = await fetch(`${url}/signup`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

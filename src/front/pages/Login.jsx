@@ -92,8 +92,8 @@ export const Login = () => {
 
                 <div className="col-12 col-md-6  d-flex justify-content-between my-1 px-4">
                     <Link to="/register">Sign Up</Link>
-                    <Link to="/recovery-password">Forgot your password?</Link>
-                </div>
+                    {/* <Link to="/recovery-password">Forgot your password?</Link>*/}
+                </div> 
             </div>
         </div>
     )

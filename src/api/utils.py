@@ -49,8 +49,8 @@ def send_email(subject, to, body):
 
     smtp_address = "smtp.gmail.com"
     smtp_port = 465
-    email_address = "ropamera@gmail.com"
-    email_password = "cxniigyabvoadjoc"
+    email_address = "ropamera@gmail.com" # Aqui va un email emisor real
+    email_password = "cxniigyabvoadjoc" # Aquí va la contraseña del email real
 
     message = MIMEMultipart("alternative")
     message["Subject"] = subject

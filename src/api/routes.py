@@ -46,9 +46,9 @@ def add_user():
     if email is None or fullname is None or password is None:
         return jsonify("You must provide email, fullname, and password"), 400
     
-    existing_user = User.query.filter_by(email=email).one_or_none()
-    if existing_user:
-        return jsonify("Email is already registered"), 400
+    # existing_user = User.query.filter_by(email=email).one_or_none()
+    # if existing_user:
+    #     return jsonify("Email is already registered"), 400
     
     user = User()
     user.email = email
