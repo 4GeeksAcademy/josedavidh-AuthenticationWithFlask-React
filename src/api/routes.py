@@ -8,6 +8,7 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from base64 import b64encode
 import os
+from flask_jwt_extended import create_access_token, jwt_required
 
 api = Blueprint('api', __name__)
 
@@ -16,8 +17,8 @@ api = Blueprint('api', __name__)
 def set_password(password, salt):
     return generate_password_hash(f"{password}{salt}")
 
-def check_password(pass_hash, password):
-    return check_password_hash(pass_hash, password)
+def check_password(pass_hash, password, salt):
+    return check_password_hash(pass_hash, f"{password}{salt}")
 
 # final manejo de hash de contraseña
 
@@ -25,13 +26,11 @@ def check_password(pass_hash, password):
 CORS(api)
 
 
-@api.route('/hello', methods=['POST', 'GET'])
+@api.route('/health-check', methods=['GET'])
 def handle_hello():
-    response_body = {
-        "message": "Hello! I'm a message that came from the backend, check the network tab on the google inspector and you will see the GET request"
-    }
+    
 
-    return jsonify(response_body), 200
+    return jsonify("ok"), 200
 
 @api.route('/signup', methods=['POST'])
 def add_user():
@@ -68,7 +67,25 @@ def user_login():
 
     if email is None or password is None:
         return jsonify("You must provide email and password"), 400
+    else:
+        # Consulta si el email existe
+        user = User.query.filter_by(email=email).one_or_none()
+        if user is None:
+            return jsonify("Bad credentials"), 400
+        else:
+            if check_password(user.password, password, user.salt):
+                # Se genera el token
+                token = create_access_token(identity=str(user.id))
 
-    print(data)
+                return jsonify({
+                    "token": token
+                }), 200
+            else:
+                return jsonify("Bad credentials"), 400
+            
+@api.route("/user", methods=["GET"])
+@jwt_required()
+def get_all_users():
+    users = User.query.all()
 
-    return jsonify("trabajando por mi nuevo pais"), 201
+    return jsonify(list(map(lambda item: item.serialize(), users))), 200
