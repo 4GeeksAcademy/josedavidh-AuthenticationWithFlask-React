@@ -46,6 +46,10 @@ def add_user():
     if email is None or fullname is None or password is None:
         return jsonify("You must provide email, fullname, and password"), 400
     
+    existing_user = User.query.filter_by(email=email).one_or_none()
+    if existing_user:
+        return jsonify("Email is already registered"), 400
+    
     user = User()
     user.email = email
     user.fullname = fullname
@@ -73,7 +77,7 @@ def user_login():
         # Consulta si el email existe
         user = User.query.filter_by(email=email).one_or_none()
         if user is None:
-            return jsonify("Bad credentials"), 400
+            return jsonify({"message": "The user is not registered"}), 400
         else:
             if check_password(user.password, password, user.salt):
                 # Se genera el token
@@ -83,7 +87,7 @@ def user_login():
                     "token": token
                 }), 200
             else:
-                return jsonify("Bad credentials"), 400
+                return jsonify({ "message": "Incorrect password" }), 400
             
 @api.route("/user", methods=["GET"])
 @jwt_required()
@@ -99,18 +103,21 @@ def get_a_user():
     user = User.query.get(user_id)
 
     if user is None:
-        return jsonify("User not found"), 404
+        return jsonify("Invalid email or password"), 404
     return jsonify(user.serialize())
 
 @api.route("/reset-password", methods=["POST"])
 def reset_password():
     # Requerimiento del correo electrónico para enviar el enlace de recuperación
     body = request.json
-    user = User.query.filter_by(email = body).one_or_one()
+    # user = User.query.filter_by(email = body).one_or_one() --> Former
+    user = User.query.filter_by(email=body.get("email")).one_or_none()
     if user is None:
-        return jsonify("User not found"), 404
+        return jsonify("Invalid email or password"), 404
+    # access_token = create_access_token(
+    #    identity=body, expires_delta=expires_delta) --> former
     access_token = create_access_token(
-        identity=body, expires_delta=expires_delta)
+        identity=body.get("email"), expires_delta=expires_delta)
 
     message = f"""
         <a href="{os.getenv("FRONTEND_URL")}/password-update?token={access_token}">Recuperar contraseña</a>
@@ -118,7 +125,8 @@ def reset_password():
 
     data = {
         "subject": "Recuperación de contraseña",
-        "to": body,
+        # "to": body, --> Former
+        "to": body.get("email"),
         "message": message
     }
 
@@ -135,7 +143,8 @@ def reset_password():
 @jwt_required()
 def update_password():
     user_token_email = get_jwt_identity()
-    password = request.json
+    # password = request.json --> Former
+    password = request.json.get("password")
 
     user = User.query.filter_by(email=user_token_email).first()
 
