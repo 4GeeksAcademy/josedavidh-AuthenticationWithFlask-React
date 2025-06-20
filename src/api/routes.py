@@ -27,11 +27,9 @@ expires_delta = timedelta(minutes=expires_in_minutes)
 # Allow CORS requests to this API
 CORS(api)
 
-
 @api.route('/health-check', methods=['GET'])
 def handle_hello():
     
-
     return jsonify("ok"), 200
 
 @api.route('/signup', methods=['POST'])
@@ -42,7 +40,6 @@ def add_user():
     password = data.get("password", None)
     salt = b64encode(os.urandom(32)).decode("utf-8")
  
-
     if email is None or fullname is None or password is None:
         return jsonify("You must provide email, fullname, and password"), 400
     
